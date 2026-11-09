@@ -28,62 +28,62 @@ It uses only two services: **ChatGPT (OpenAI)** and **Sarvam AI**. Voice input a
    You also need some credit under *Billing* on that site. A ChatGPT Plus subscription is separate from API credit and does not cover this.
 2. **Sarvam key:** <https://dashboard.sarvam.ai> → *API Keys*.
 
-## Step 2 — Put the keys in a `.env` file
+## Step 2 — Put the keys on Vercel (the live website)
 
-In the project folder (next to `server.js`), copy `.env.example` to a new file named **`.env`** and paste the keys in:
+The site runs on **Vercel**. Your keys are stored there, never in the code:
 
-```
-OPENAI_API_KEY=sk-...your ChatGPT key...
-SARVAM_API_KEY=...your Sarvam key...
-APP_PASSWORD=pick-a-family-password
-```
+1. Open the project on <https://vercel.com> → **Settings** → **Environment Variables**.
+2. Add these, ticking **Production** and **Preview** for each:
 
-Rules for keeping the keys safe:
+   | Name             | Value |
+   | ---------------- | ----- |
+   | `OPENAI_API_KEY` | your ChatGPT key (`sk-...`) |
+   | `SARVAM_API_KEY` | your Sarvam key |
+   | `APP_PASSWORD`   | a password the family types once (strongly recommended) |
 
-- ✅ Keys go **only** in `.env` on your computer, or in your hosting site's "Environment variables" settings.
-- ❌ Never put them in the `public/` folder, in the HTML or JavaScript, or in a GitHub commit. `.env` is already in `.gitignore`, so git skips it.
+3. Go to **Deployments**, open the ⋯ menu on the latest one, and choose **Redeploy**. New keys only take effect after a redeploy.
+
+Then open the site link on grandpa's phone, allow the microphone, and use *Add to Home screen* so it works like an app. If a key is missing, the page shows a note saying which one.
+
+Keeping the keys safe:
+
+- ✅ Keys go **only** in Vercel's Environment Variables, or in a `.env` file on your own computer.
+- ❌ Never put them in the `public/` folder, in the HTML or JavaScript, or in a GitHub commit. `.env` is already in `.gitignore`.
 - ❌ Don't paste them into chats or screenshots. If a key leaks, delete it on the OpenAI or Sarvam website and make a new one.
 
-## Step 3 — Run it
+**Always set `APP_PASSWORD`.** Otherwise anyone who finds the link can spend your OpenAI and Sarvam credit.
 
-You need [Node.js](https://nodejs.org) 20.12 or newer.
+Every push to the `main` branch on GitHub redeploys the site automatically.
+
+## Run it on your own computer (optional)
+
+You need [Node.js](https://nodejs.org) 20.12 or newer. Copy `.env.example` to `.env`, paste in your keys, then:
 
 ```bash
 npm install
 npm start
 ```
 
-Open <http://localhost:3000>. If a key is missing, the page shows a note saying which one.
+Open <http://localhost:3000>.
 
-## Step 4 — Put it online (so grandpa can use it on his phone)
-
-Use any Node host, such as **Render**, **Railway**, or **Fly.io**:
-
-- Connect this GitHub repo.
-- Build command: `npm install`. Start command: `npm start`.
-- Under **Environment variables**, add `OPENAI_API_KEY`, `SARVAM_API_KEY` and `APP_PASSWORD`. The host stores them privately; you don't upload `.env`.
-
-The site must use **https://** for the microphone to work. These hosts provide it automatically. Then open the link on grandpa's phone and use *Add to Home screen*, so it works like an app.
-
-**Always set `APP_PASSWORD` for an online site.** Otherwise anyone who finds the link can spend your OpenAI and Sarvam credit.
-
----
-
-## Optional settings (in `.env`)
+## Optional settings (Vercel Environment Variables or `.env`)
 
 | Variable         | Default   | What it does |
 | ---------------- | --------- | ------------ |
 | `OPENAI_MODEL`   | `gpt-5.5` | ChatGPT model. A cheaper option is `gpt-5.4-mini`. |
 | `SARVAM_SPEAKER` | (default) | Reading voice, e.g. `kavitha`, `anand`, `ritu`. |
 | `SARVAM_PACE`    | `0.9`     | Speaking speed (0.5–2.0). Lower is slower. |
-| `PORT`           | `3000`    | Port to listen on. |
+| `PORT`           | `3000`    | Port for `npm start` on your computer. |
 
 ## How it works
 
-| Endpoint               | What it does |
-| ---------------------- | ------------ |
-| `POST /api/transcribe` | Recorded audio → Sarvam `POST /speech-to-text` (`saaras:v3`, `mode=transcribe`, `language_code=ml-IN`) → `{ text }`. |
-| `POST /api/chat`       | Streams ChatGPT's English answer (`en` events), then ChatGPT's Malayalam translation (`ml` events), as Server-Sent Events. |
-| `POST /api/speak`      | Malayalam text → Sarvam `POST /text-to-speech` (`bulbul:v3`, `ml-IN`) → audio. Long answers are split into short pieces, so playback starts quickly. |
+| File / endpoint                            | What it does |
+| ------------------------------------------ | ------------ |
+| `public/`                                  | The web page (HTML, CSS, JavaScript). |
+| `api/transcribe.js` → `POST /api/transcribe` | Recorded audio → Sarvam `POST /speech-to-text` (`saaras:v3`, `mode=transcribe`, `language_code=ml-IN`) → `{ text }`. |
+| `api/chat.js` → `POST /api/chat`           | Streams ChatGPT's English answer (`en` events), then ChatGPT's Malayalam translation (`ml` events), as Server-Sent Events. |
+| `api/speak.js` → `POST /api/speak`         | Malayalam text → Sarvam `POST /text-to-speech` (`bulbul:v3`, `ml-IN`) → audio. Long answers are split into short pieces, so playback starts quickly. |
+| `lib/app.js`                               | The shared code behind all of the above. |
+| `server.js`                                | Runs everything locally for `npm start`. Vercel doesn't use it. |
 
-The keys are only ever used inside `server.js`. The browser never sees them.
+The keys are only ever read on the server side. The browser never sees them.

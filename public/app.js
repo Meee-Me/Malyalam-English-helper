@@ -606,7 +606,8 @@ async function startRecording() {
     return;
   }
   const mimeType = pickMimeType();
-  const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  // 32 kbps is plenty for speech and keeps a 30-second clip around 120 KB.
+  const mr = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 32000 });
   const chunks = [];
   mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   mr.onstop = () => {
