@@ -769,7 +769,7 @@ fetch("/api/config")
     const note = $("#setupNote");
     note.hidden = missing.length === 0;
     note.textContent = missing.length
-      ? `സജ്ജീകരണം പൂർത്തിയായിട്ടില്ല: .env ഫയലിൽ ${missing.join(", ")} ചേർക്കുക (README കാണുക).`
+      ? `സജ്ജീകരണം പൂർത്തിയായിട്ടില്ല — ഈ കീ കാണുന്നില്ല: ${missing.join(", ")}. Vercel → Settings → Environments → Production ൽ ചേർത്ത് Redeploy ചെയ്യുക.`
       : "";
     if (cfg.needsPassword && !password) requestPassword();
   })
