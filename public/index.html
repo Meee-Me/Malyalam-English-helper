@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>മലയാളം AI സഹായി</title>
+  <meta name="theme-color" content="#0f766e" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="36" height="36" />
+      <div>
+        <h1>മലയാളം AI സഹായി</h1>
+        <p class="sub">എന്തും ചോദിക്കാം — മറുപടി മലയാളത്തിൽ</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="smaller" class="icon-btn" title="അക്ഷരം ചെറുതാക്കുക" aria-label="Smaller text">A−</button>
+      <button id="bigger" class="icon-btn" title="അക്ഷരം വലുതാക്കുക" aria-label="Bigger text">A+</button>
+      <button id="newChat" class="pill-btn" title="പുതിയ സംഭാഷണം" aria-label="New chat">＋<span class="label"> പുതിയത്</span></button>
+    </div>
+  </header>
+
+  <main id="chat" class="chat" aria-live="polite">
+    <section id="welcome" class="welcome">
+      <h2>നമസ്കാരം! 🙏</h2>
+      <p>താഴെ നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യുക, അല്ലെങ്കിൽ 🎤 അമർത്തി സംസാരിക്കുക.</p>
+      <div class="chips">
+        <button class="chip">ഇന്നത്തെ ആരോഗ്യകരമായ ഭക്ഷണം എന്ത് കഴിക്കാം?</button>
+        <button class="chip">ഷുഗർ നിയന്ത്രിക്കാൻ എന്തൊക്കെ ശ്രദ്ധിക്കണം?</button>
+        <button class="chip">വാട്ട്സ്ആപ്പിൽ ഫോട്ടോ എങ്ങനെ അയയ്ക്കാം?</button>
+        <button class="chip">ഒരു ചെറിയ തമാശ പറയൂ</button>
+        <button class="chip">ഓൺലൈൻ തട്ടിപ്പുകളിൽ നിന്ന് എങ്ങനെ രക്ഷപ്പെടാം?</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="composer">
+    <form id="form" autocomplete="off">
+      <button type="button" id="mic" class="round-btn mic" title="സംസാരിക്കുക" aria-label="Speak">🎤</button>
+      <textarea id="input" rows="1" placeholder="ഇവിടെ ചോദിക്കൂ…" aria-label="Message"></textarea>
+      <button type="submit" id="send" class="round-btn send" title="അയയ്ക്കുക" aria-label="Send">➤</button>
+    </form>
+    <p class="hint">AI ചിലപ്പോൾ തെറ്റുകൾ വരുത്താം. പ്രധാന കാര്യങ്ങൾ ഉറപ്പാക്കുക.</p>
+  </footer>
+
+  <dialog id="pwDialog">
+    <form method="dialog" id="pwForm">
+      <h3>പാസ്‌വേഡ്</h3>
+      <p>ഈ സൈറ്റ് ഉപയോഗിക്കാൻ പാസ്‌വേഡ് നൽകുക.</p>
+      <input id="pwInput" type="password" required />
+      <button class="pill-btn" type="submit">ശരി</button>
+    </form>
+  </dialog>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
