@@ -4,69 +4,86 @@ A ChatGPT-style website for Malayalam speakers who would rather **talk than type
 
 ```
 Grandparent speaks Malayalam 🎤
-   → Sarvam AI speech-to-text  → Malayalam text (shown in the chat)
-   → Claude                     → answer in simple English
-   → Claude                     → answer translated into Malayalam
-   → Sarvam AI text-to-speech   → answer read aloud in Malayalam 🔊
+   → Sarvam speech-to-text   → Malayalam text (shown in the chat)
+   → ChatGPT                  → answer in simple English
+   → ChatGPT                  → answer translated into Malayalam
+   → Sarvam text-to-speech    → answer read aloud in Malayalam 🔊
 ```
+
+It uses only two services: **ChatGPT (OpenAI)** and **Sarvam AI**. Voice input and voice output are always Malayalam.
 
 ## Features
 
-- **Big 🎤 button.** Tap it, speak, and tap again to stop (the limit is about 30 seconds). Sarvam turns the speech into text, and the question goes to the AI automatically.
-- **Spoken answers.** When a question was asked by voice, the Malayalam answer plays automatically in Sarvam's Malayalam voice. 🔊 replays it and ⏹ stops it.
-- **Typing still works.** Family members can use the text box. Typed questions are not read aloud automatically.
-- **Malayalam is shown first, in big text.** "English കാണുക" shows the English the AI originally wrote.
-- **Easy to use:** the whole interface is in Malayalam, A− / A+ change the text size, there are sample questions to tap, and conversations are saved in the browser (＋ starts a new one).
-- Works on phones and computers, with dark mode.
-- An optional password protects your API keys.
+- **ChatGPT-style layout:** a sidebar with past chats (＋ new chat, 🗑 delete), a centered conversation, and a rounded message box. On a phone, ☰ opens the chat list.
+- **Big green 🎤 button.** Tap it, speak, and tap again to stop (up to about 30 seconds). The question is sent automatically.
+- **Spoken answers.** When a question was asked by voice, the answer plays aloud in Sarvam's Malayalam voice. 🔊 replays it and ⏹ stops it.
+- **Malayalam answers in big text.** "English കാണുക" shows ChatGPT's original English.
+- Typing works too. The text size can be changed (A− / A+), chats are saved in the browser, and dark mode is supported.
 
-## Run it
+---
 
-You need [Node.js](https://nodejs.org) 18 or newer and two API keys:
+## Step 1 — Get the two keys
 
-- **Anthropic** (the AI): <https://console.anthropic.com>
-- **Sarvam AI** (voice): <https://dashboard.sarvam.ai>
+1. **ChatGPT key:** <https://platform.openai.com/api-keys> → *Create new secret key*. It starts with `sk-`.
+   You also need some credit under *Billing* on that site. A ChatGPT Plus subscription is separate from API credit and does not cover this.
+2. **Sarvam key:** <https://dashboard.sarvam.ai> → *API Keys*.
+
+## Step 2 — Put the keys on Vercel (the live website)
+
+The site runs on **Vercel**. Your keys are stored there, never in the code:
+
+1. Open the project on <https://vercel.com> → **Settings** → **Environment Variables**.
+2. Add these, ticking **Production** and **Preview** for each:
+
+   | Name             | Value |
+   | ---------------- | ----- |
+   | `OPENAI_API_KEY` | your ChatGPT key (`sk-...`) |
+   | `SARVAM_API_KEY` | your Sarvam key |
+   | `APP_PASSWORD`   | a password the family types once (strongly recommended) |
+
+3. Go to **Deployments**, open the ⋯ menu on the latest one, and choose **Redeploy**. New keys only take effect after a redeploy.
+
+Then open the site link on grandpa's phone, allow the microphone, and use *Add to Home screen* so it works like an app. If a key is missing, the page shows a note saying which one.
+
+Keeping the keys safe:
+
+- ✅ Keys go **only** in Vercel's Environment Variables, or in a `.env` file on your own computer.
+- ❌ Never put them in the `public/` folder, in the HTML or JavaScript, or in a GitHub commit. `.env` is already in `.gitignore`.
+- ❌ Don't paste them into chats or screenshots. If a key leaks, delete it on the OpenAI or Sarvam website and make a new one.
+
+**Always set `APP_PASSWORD`.** Otherwise anyone who finds the link can spend your OpenAI and Sarvam credit.
+
+Every push to the `main` branch on GitHub redeploys the site automatically.
+
+## Run it on your own computer (optional)
+
+You need [Node.js](https://nodejs.org) 20.12 or newer. Copy `.env.example` to `.env`, paste in your keys, then:
 
 ```bash
 npm install
-ANTHROPIC_API_KEY=sk-ant-... SARVAM_API_KEY=your-sarvam-key npm start
+npm start
 ```
 
-Open <http://localhost:3000>. Without `SARVAM_API_KEY` the site still works, but text-only: the 🎤 button is hidden and read-aloud falls back to the device's own Malayalam voice, if it has one.
+Open <http://localhost:3000>.
 
-> **The microphone only works over `https://` (or on `localhost`).** Browsers block the microphone on plain `http://` sites, so put the site behind HTTPS when you host it. Every host listed below provides HTTPS automatically.
+## Optional settings (Vercel Environment Variables or `.env`)
 
-### Settings (environment variables)
-
-| Variable            | Default           | What it does |
-| ------------------- | ----------------- | ------------ |
-| `ANTHROPIC_API_KEY` | —                 | Required. Anthropic API key. |
-| `SARVAM_API_KEY`    | —                 | Sarvam API key. Turns on voice input and Sarvam read-aloud. |
-| `APP_PASSWORD`      | (none)            | If set, the site asks for this password once per device. |
-| `PORT`              | `3000`            | Port to listen on. |
-| `CLAUDE_MODEL`      | `claude-opus-5-5` | Claude model. |
-| `SARVAM_LANGUAGE`   | `ml-IN`           | Spoken language. Use `unknown` to auto-detect, e.g. if they mix in English. |
-| `SARVAM_STT_MODEL`  | `saaras:v3`       | Sarvam speech-to-text model. |
-| `SARVAM_TTS_MODEL`  | `bulbul:v3`       | Sarvam text-to-speech model. |
-| `SARVAM_SPEAKER`    | (model default)   | Voice for read-aloud, e.g. `kavitha`, `anand`, `ritu`. Names must suit the model. |
-| `SARVAM_PACE`       | `0.9`             | Speaking speed (0.5–2.0). Lower is slower. |
-
-**Set `APP_PASSWORD` before you put the site on the internet.** Without it, anyone who finds the link can spend your Anthropic and Sarvam credit.
-
-## Put it online
-
-The app is a single Node server (`server.js`) that also serves the page in `public/`. Any Node host works, for example Render, Railway, or Fly.io:
-
-- Build command: `npm install`
-- Start command: `npm start`
-- Environment variables: `ANTHROPIC_API_KEY`, `SARVAM_API_KEY`, `APP_PASSWORD`
+| Variable         | Default   | What it does |
+| ---------------- | --------- | ------------ |
+| `OPENAI_MODEL`   | `gpt-5.5` | ChatGPT model. A cheaper option is `gpt-5.4-mini`. |
+| `SARVAM_SPEAKER` | (default) | Reading voice, e.g. `kavitha`, `anand`, `ritu`. |
+| `SARVAM_PACE`    | `0.9`     | Speaking speed (0.5–2.0). Lower is slower. |
+| `PORT`           | `3000`    | Port for `npm start` on your computer. |
 
 ## How it works
 
-| Endpoint              | What it does |
-| --------------------- | ------------ |
-| `POST /api/transcribe` | Receives the recorded audio (WebM/MP4/OGG) and sends it to Sarvam `POST /speech-to-text` (`saaras:v3`, `mode=transcribe`, `language_code=ml-IN`). Returns `{ text }`. |
-| `POST /api/chat`       | Streams Claude's English answer (`en` events), then Claude's Malayalam translation of it (`ml` events), as Server-Sent Events. |
-| `POST /api/speak`      | Sends Malayalam text (up to 2,500 characters) to Sarvam `POST /text-to-speech` (`bulbul:v3`) and returns the audio. The page splits long answers into short pieces, so playback starts quickly. |
+| File / endpoint                            | What it does |
+| ------------------------------------------ | ------------ |
+| `public/`                                  | The web page (HTML, CSS, JavaScript). |
+| `api/transcribe.js` → `POST /api/transcribe` | Recorded audio → Sarvam `POST /speech-to-text` (`saaras:v3`, `mode=transcribe`, `language_code=ml-IN`) → `{ text }`. |
+| `api/chat.js` → `POST /api/chat`           | Streams ChatGPT's English answer (`en` events), then ChatGPT's Malayalam translation (`ml` events), as Server-Sent Events. |
+| `api/speak.js` → `POST /api/speak`         | Malayalam text → Sarvam `POST /text-to-speech` (`bulbul:v3`, `ml-IN`) → audio. Long answers are split into short pieces, so playback starts quickly. |
+| `lib/app.js`                               | The shared code behind all of the above. |
+| `server.js`                                | Runs everything locally for `npm start`. Vercel doesn't use it. |
 
-API keys stay on the server and are never sent to the browser.
+The keys are only ever read on the server side. The browser never sees them.

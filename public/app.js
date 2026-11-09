@@ -1,27 +1,33 @@
 // Front end for Malayalam AI Helper.
 //
-// Voice flow: tap 🎤 → speak → tap again → Sarvam turns the speech into
-// Malayalam text → that text is sent to the AI automatically → the server
-// streams the English answer ("en" events) and its Malayalam translation
-// ("ml" events) → the Malayalam answer is read aloud with Sarvam's voice.
+// Voice flow: tap 🎤 → speak → tap again → Sarvam turns the Malayalam speech
+// into text → the text goes to ChatGPT automatically → the server streams the
+// English answer ("en" events) and its Malayalam translation ("ml" events) →
+// the Malayalam answer is read aloud with Sarvam's voice.
 
 const $ = (sel) => document.querySelector(sel);
 const chatEl = $("#chat");
+const threadEl = $("#thread");
 const welcomeEl = $("#welcome");
 const form = $("#form");
 const input = $("#input");
 const sendBtn = $("#send");
 const micBtn = $("#mic");
 const recStatus = $("#recStatus");
+const sidebar = $("#sidebar");
+const scrim = $("#scrim");
+const chatList = $("#chatList");
 
-const STORE_KEY = "ml-helper-chat-v1";
+const CHATS_KEY = "ml-helper-chats-v2";
+const CURRENT_KEY = "ml-helper-current";
+const OLD_KEY = "ml-helper-chat-v1";
 const SCALE_KEY = "ml-helper-font-scale";
 const PW_KEY = "ml-helper-password";
 const MAX_RECORD_SECONDS = 29; // Sarvam's quick speech-to-text takes clips under 30 seconds
 
 const ERRORS = {
-  auth: "സെർവറിൽ AI കീ ശരിയല്ല. ഇത് സജ്ജമാക്കിയ ആളെ അറിയിക്കുക.",
-  sarvam_key: "ശബ്ദ സേവനത്തിന്റെ (Sarvam) കീ ശരിയല്ല. ഇത് സജ്ജമാക്കിയ ആളെ അറിയിക്കുക.",
+  auth: "ChatGPT കീ ശരിയല്ല അല്ലെങ്കിൽ ഇല്ല. ഇത് സജ്ജമാക്കിയ ആളെ അറിയിക്കുക.",
+  sarvam_key: "Sarvam കീ ശരിയല്ല അല്ലെങ്കിൽ ഇല്ല. ഇത് സജ്ജമാക്കിയ ആളെ അറിയിക്കുക.",
   busy: "സെർവർ ഇപ്പോൾ തിരക്കിലാണ്. അൽപ്പം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.",
   network: "ഇന്റർനെറ്റ് കണക്ഷൻ പ്രശ്നം. വീണ്ടും ശ്രമിക്കുക.",
   refusal: "ക്ഷമിക്കണം, ഈ ചോദ്യത്തിന് മറുപടി നൽകാൻ കഴിയില്ല.",
@@ -48,11 +54,55 @@ const store = {
   },
 };
 
-// Conversation: [{role:"user", content, voice?}, {role:"assistant", content: <English>, ml: <Malayalam>}]
-let history = store.get(STORE_KEY, []);
+// ---------- Conversations ----------
+// chats: [{ id, title, updated, messages: [{role:"user", content, voice?},
+//                                          {role:"assistant", content: <English>, ml: <Malayalam>}] }]
+let chats = store.get(CHATS_KEY, null);
+if (!Array.isArray(chats)) {
+  chats = [];
+  const old = store.get(OLD_KEY, []); // bring over a chat saved by the earlier version
+  if (Array.isArray(old) && old.length) chats.push(makeChat(old));
+}
+let currentId = store.get(CURRENT_KEY, null);
 let busy = false;
 let password = store.get(PW_KEY, "");
 let sarvamVoice = false; // set from /api/config
+
+function makeChat(messages = []) {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    title: titleFrom(messages),
+    updated: Date.now(),
+    messages,
+  };
+}
+function titleFrom(messages) {
+  const first = messages.find((m) => m.role === "user");
+  if (!first) return "പുതിയ സംഭാഷണം";
+  const t = first.content.replace(/\s+/g, " ").trim();
+  return t.length > 40 ? t.slice(0, 40) + "…" : t;
+}
+function current() {
+  let chat = chats.find((c) => c.id === currentId);
+  if (!chat) {
+    chat = chats.find((c) => !c.messages.length) || makeChat();
+    if (!chats.includes(chat)) chats.unshift(chat);
+    currentId = chat.id;
+  }
+  return chat;
+}
+function saveChats() {
+  // Don't keep empty chats around except the one on screen.
+  chats = chats.filter((c) => c.messages.length || c.id === currentId);
+  store.set(CHATS_KEY, chats);
+  store.set(CURRENT_KEY, currentId);
+}
+function touch(chat) {
+  chat.updated = Date.now();
+  chat.title = titleFrom(chat.messages);
+  saveChats();
+  renderSidebar();
+}
 
 function authHeaders(extra = {}) {
   return password ? { ...extra, "x-app-password": password } : extra;
@@ -255,8 +305,10 @@ function addUser(text, voice) {
   const row = document.createElement("div");
   row.className = "msg user";
   const html = render(text);
-  row.innerHTML = `<div class="bubble">${voice ? html.replace(/^<(p|ul|ol)([^>]*)>/, '<$1$2><span class="voice-note" title="ശബ്ദത്തിൽ ചോദിച്ചത്">🎤</span>') : html}</div>`;
-  chatEl.appendChild(row);
+  row.innerHTML = `<div class="bubble">${
+    voice ? html.replace(/^<(p|ul|ol)([^>]*)>/, '<$1$2><span class="voice-note" title="ശബ്ദത്തിൽ ചോദിച്ചത്">🎤</span>') : html
+  }</div>`;
+  threadEl.appendChild(row);
   return row;
 }
 
@@ -273,13 +325,14 @@ function addBot() {
   const row = document.createElement("div");
   row.className = "msg bot";
   row.innerHTML = `
-    <div class="bubble">
+    <div class="avatar"><img src="icon.svg" alt="" /></div>
+    <div class="bot-body">
       <div class="status"><span class="dots"><span></span><span></span><span></span></span><span class="status-text">ആലോചിക്കുന്നു…</span></div>
       <div class="ml" hidden></div>
-      <div class="en" hidden><div class="en-label">English</div><div class="en-body"></div></div>
+      <div class="en" hidden><div class="en-label">ENGLISH</div><div class="en-body"></div></div>
       <div class="tools" hidden></div>
     </div>`;
-  chatEl.appendChild(row);
+  threadEl.appendChild(row);
   return {
     row,
     status: row.querySelector(".status"),
@@ -324,19 +377,86 @@ function showError(el, code, retry) {
   el.tools.replaceChildren(toolButton("🔄 വീണ്ടും ശ്രമിക്കുക", retry));
 }
 
-function renderAll() {
-  chatEl.querySelectorAll(".msg").forEach((m) => m.remove());
-  welcomeEl.hidden = history.length > 0;
-  for (const m of history) {
+function renderThread() {
+  const chat = current();
+  threadEl.replaceChildren();
+  welcomeEl.hidden = chat.messages.length > 0;
+  for (const m of chat.messages) {
     if (m.role === "user") addUser(m.content, m.voice);
     else finishBot(addBot(), m.content, m.ml || m.content);
   }
-  if (history.length) scrollToBottom();
+  if (chat.messages.length) scrollToBottom();
   else chatEl.scrollTop = 0;
 }
 
-// ---------- Talking to the AI ----------
+function renderSidebar() {
+  const list = chats.filter((c) => c.messages.length).sort((a, b) => b.updated - a.updated);
+  chatList.replaceChildren(
+    ...list.map((c) => {
+      const item = document.createElement("div");
+      item.className = "chat-item" + (c.id === currentId ? " active" : "");
+      const open = document.createElement("button");
+      open.className = "chat-open";
+      open.textContent = c.title;
+      open.title = c.title;
+      open.addEventListener("click", () => switchChat(c.id));
+      const del = document.createElement("button");
+      del.className = "chat-del";
+      del.textContent = "🗑";
+      del.setAttribute("aria-label", "Delete chat");
+      del.addEventListener("click", () => deleteChat(c.id));
+      item.append(open, del);
+      return item;
+    }),
+  );
+}
+
+function locked() {
+  return busy || recorder || transcribing;
+}
+
+function switchChat(id) {
+  if (locked()) return;
+  stopSpeaking();
+  currentId = id;
+  saveChats();
+  renderThread();
+  renderSidebar();
+  closeSidebar();
+}
+
+function newChat() {
+  if (locked()) return;
+  stopSpeaking();
+  const empty = chats.find((c) => !c.messages.length);
+  const chat = empty || makeChat();
+  if (!empty) chats.unshift(chat);
+  currentId = chat.id;
+  saveChats();
+  renderThread();
+  renderSidebar();
+  closeSidebar();
+  input.value = "";
+  autoGrow();
+  updateControls();
+}
+
+function deleteChat(id) {
+  if (locked()) return;
+  if (!confirm("ഈ സംഭാഷണം മായ്ക്കട്ടെ?")) return;
+  chats = chats.filter((c) => c.id !== id);
+  if (id === currentId) {
+    stopSpeaking();
+    currentId = null;
+  }
+  saveChats();
+  renderThread();
+  renderSidebar();
+}
+
+// ---------- Talking to ChatGPT ----------
 async function ask({ autoSpeak = false } = {}) {
+  const chat = current();
   busy = true;
   updateControls();
   welcomeEl.hidden = true;
@@ -353,13 +473,14 @@ async function ask({ autoSpeak = false } = {}) {
       headers: authHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({
         password,
-        messages: history.map(({ role, content }) => ({ role, content })),
+        messages: chat.messages.map(({ role, content }) => ({ role, content })),
       }),
     });
     if (res.status === 401) {
       errorCode = "password";
     } else if (!res.ok || !res.body) {
-      errorCode = "server";
+      const data = await res.json().catch(() => ({}));
+      errorCode = data.error || "server";
     } else {
       const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
       let buf = "";
@@ -396,20 +517,21 @@ async function ask({ autoSpeak = false } = {}) {
     errorCode = "network";
   }
 
+  busy = false;
   if (errorCode) {
     showError(el, errorCode, async () => {
+      if (locked()) return;
       el.row.remove();
       if (errorCode === "password") await requestPassword();
       ask({ autoSpeak });
     });
   } else {
-    history.push({ role: "assistant", content: english, ml: malayalam });
-    store.set(STORE_KEY, history);
+    chat.messages.push({ role: "assistant", content: english, ml: malayalam });
+    touch(chat);
     const speakBtn = finishBot(el, english, malayalam);
     // Asked by voice → answer by voice.
-    if (autoSpeak) speak(malayalam, speakBtn);
+    if (autoSpeak && chat.id === currentId) speak(malayalam, speakBtn);
   }
-  busy = false;
   updateControls();
   scrollToBottom();
 }
@@ -418,13 +540,15 @@ function send(text, { voice = false } = {}) {
   text = text.trim();
   if (!text || busy) return;
   stopSpeaking();
+  const chat = current();
   // If the last turn failed, drop the unanswered question before adding a new one.
-  if (history.length && history[history.length - 1].role === "user") {
-    history.pop();
-    renderAll();
+  if (chat.messages.length && chat.messages[chat.messages.length - 1].role === "user") {
+    chat.messages.pop();
+    renderThread();
   }
-  history.push(voice ? { role: "user", content: text, voice: true } : { role: "user", content: text });
-  store.set(STORE_KEY, history);
+  chat.messages.push(voice ? { role: "user", content: text, voice: true } : { role: "user", content: text });
+  touch(chat);
+  welcomeEl.hidden = true;
   addUser(text, voice);
   if (!voice) {
     input.value = "";
@@ -482,7 +606,8 @@ async function startRecording() {
     return;
   }
   const mimeType = pickMimeType();
-  const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  // 32 kbps is plenty for speech and keeps a 30-second clip around 120 KB.
+  const mr = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 32000 });
   const chunks = [];
   mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   mr.onstop = () => {
@@ -493,7 +618,7 @@ async function startRecording() {
     micBtn.classList.remove("listening");
     micBtn.textContent = "🎤";
     if (seconds < 0.8) {
-      setRecStatus("ബട്ടൺ അമർത്തി സംസാരിക്കുക, പറഞ്ഞു കഴിഞ്ഞ് വീണ്ടും അമർത്തുക.", "", 5000);
+      setRecStatus("🎤 അമർത്തി സംസാരിക്കുക, പറഞ്ഞു കഴിഞ്ഞ് വീണ്ടും അമർത്തുക.", "", 5000);
       updateControls();
       return;
     }
@@ -504,11 +629,11 @@ async function startRecording() {
   mr.start();
   micBtn.classList.add("listening");
   micBtn.textContent = "⏹";
+  updateControls();
   const tick = () => {
     const s = Math.floor((Date.now() - recorder.started) / 1000);
-    const left = MAX_RECORD_SECONDS - s;
     setRecStatus(`കേൾക്കുന്നു… ${s} സെ. — നിർത്താൻ ⏹ അമർത്തുക`, "recording");
-    if (left <= 0) stopRecording();
+    if (s >= MAX_RECORD_SECONDS) stopRecording();
   };
   tick();
   recorder.timer = setInterval(tick, 500);
@@ -561,13 +686,13 @@ micBtn.addEventListener("click", () => {
   else if (!busy && !transcribing) startRecording();
 });
 
-// ---------- Composer & controls ----------
+// ---------- Composer, sidebar & controls ----------
 function autoGrow() {
   input.style.height = "auto";
-  input.style.height = input.scrollHeight + 4 + "px";
+  input.style.height = input.scrollHeight + "px";
 }
 function updateControls() {
-  sendBtn.disabled = busy || transcribing || !input.value.trim();
+  sendBtn.disabled = busy || transcribing || Boolean(recorder) || !input.value.trim();
   micBtn.disabled = !recorder && (busy || transcribing);
 }
 
@@ -588,14 +713,19 @@ form.addEventListener("submit", (e) => {
 });
 document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => send(c.textContent)));
 
-$("#newChat").addEventListener("click", () => {
-  if (busy || recorder || transcribing) return;
-  if (history.length && !confirm("പുതിയ സംഭാഷണം തുടങ്ങട്ടെ? പഴയത് മായ്ക്കപ്പെടും.")) return;
-  stopSpeaking();
-  history = [];
-  store.set(STORE_KEY, history);
-  renderAll();
-});
+function openSidebar() {
+  sidebar.classList.add("open");
+  scrim.hidden = false;
+}
+function closeSidebar() {
+  sidebar.classList.remove("open");
+  scrim.hidden = true;
+}
+$("#openSidebar").addEventListener("click", openSidebar);
+$("#closeSidebar").addEventListener("click", closeSidebar);
+scrim.addEventListener("click", closeSidebar);
+$("#newChat").addEventListener("click", newChat);
+$("#newChatTop").addEventListener("click", newChat);
 
 let scale = store.get(SCALE_KEY, 1);
 function applyScale() {
@@ -612,13 +742,19 @@ $("#smaller").addEventListener("click", () => {
 });
 
 // ---------- Start ----------
-// A saved conversation that ended on an unanswered question: put it back in the box.
-if (history.length && history[history.length - 1].role === "user") {
-  input.value = history.pop().content;
-  store.set(STORE_KEY, history);
+{
+  // A saved chat that ended on an unanswered question: put it back in the box.
+  const chat = current();
+  const last = chat.messages[chat.messages.length - 1];
+  if (last?.role === "user") {
+    chat.messages.pop();
+    input.value = last.content;
+  }
+  saveChats();
 }
 applyScale();
-renderAll();
+renderThread();
+renderSidebar();
 autoGrow();
 updateControls();
 
@@ -629,6 +765,12 @@ fetch("/api/config")
     const canRecord = sarvamVoice && window.MediaRecorder && navigator.mediaDevices?.getUserMedia;
     micBtn.hidden = !canRecord;
     document.body.classList.toggle("has-voice", Boolean(canRecord));
+    const missing = [!cfg.chat && "OPENAI_API_KEY", !cfg.voice && "SARVAM_API_KEY"].filter(Boolean);
+    const note = $("#setupNote");
+    note.hidden = missing.length === 0;
+    note.textContent = missing.length
+      ? `സജ്ജീകരണം പൂർത്തിയായിട്ടില്ല: .env ഫയലിൽ ${missing.join(", ")} ചേർക്കുക (README കാണുക).`
+      : "";
     if (cfg.needsPassword && !password) requestPassword();
   })
   .catch(() => {});
