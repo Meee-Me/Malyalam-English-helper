@@ -56,7 +56,7 @@ Every push to the `main` branch on GitHub redeploys the site automatically.
 
 ## Run it on your own computer (optional)
 
-You need [Node.js](https://nodejs.org) 20.12 or newer. Copy `.env.example` to `.env`, paste in your keys, then:
+You need [Node.js](https://nodejs.org) 22. Copy `.env.example` to `.env`, paste in your keys, then:
 
 ```bash
 npm install
@@ -83,6 +83,6 @@ Open <http://localhost:3000>.
 | `api/chat.js` → `POST /api/chat`           | Streams Gemini's English answer (`en` events), then Gemini's Malayalam translation (`ml` events), as Server-Sent Events. |
 | `api/speak.js` → `POST /api/speak`         | Malayalam text → Sarvam `POST /text-to-speech` (`bulbul:v3`, `ml-IN`) → audio. Long answers are split into short pieces, so playback starts quickly. |
 | `lib/app.js`                               | The shared code behind all of the above. |
-| `server.js`                                | Runs everything locally for `npm start`. Vercel doesn't use it. |
+| `dev-server.js`                            | Runs everything locally for `npm start`. Vercel doesn't use it. |
 
 The keys are only ever read on the server side. The browser never sees them.

@@ -1,9 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "outputDirectory": "public",
   "functions": {
-    "api/chat.js": { "maxDuration": 120 },
-    "api/transcribe.js": { "maxDuration": 60 },
-    "api/speak.js": { "maxDuration": 60 }
+    "api/chat.js": {
+      "maxDuration": 120
+    },
+    "api/transcribe.js": {
+      "maxDuration": 60
+    },
+    "api/speak.js": {
+      "maxDuration": 60
+    }
   }
 }

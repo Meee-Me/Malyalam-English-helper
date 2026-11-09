@@ -1,5 +1,6 @@
 // Run Malayalam AI Helper on your own computer:  npm start  ->  http://localhost:3000
-// (On Vercel, the files in api/ are used instead of this file.)
+// (Vercel does not use this file: it serves public/ as static files and api/ as functions.
+// It is deliberately not named server.js, which Vercel would treat as the whole app.)
 //
 // Put your keys in a file called .env first (copy .env.example).
 
