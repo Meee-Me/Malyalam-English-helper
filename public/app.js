@@ -369,10 +369,12 @@ function finishBot(el, english, malayalam) {
   return speakBtn;
 }
 
-function showError(el, code, retry) {
+function showError(el, code, detail, retry) {
   el.status.hidden = true;
   el.ml.hidden = false;
-  el.ml.innerHTML = `<p class="error">⚠️ ${escapeHtml(ERRORS[code] || ERRORS.server)}</p>`;
+  el.ml.innerHTML =
+    `<p class="error">⚠️ ${escapeHtml(ERRORS[code] || ERRORS.server)}</p>` +
+    (detail ? `<p class="error-detail">${escapeHtml(detail)}</p>` : "");
   el.tools.hidden = false;
   el.tools.replaceChildren(toolButton("🔄 വീണ്ടും ശ്രമിക്കുക", retry));
 }
@@ -466,6 +468,7 @@ async function ask({ autoSpeak = false } = {}) {
   let english = "";
   let malayalam = "";
   let errorCode = null;
+  let errorDetail = "";
 
   try {
     const res = await fetch("/api/chat", {
@@ -507,6 +510,7 @@ async function ask({ autoSpeak = false } = {}) {
             el.ml.innerHTML = render(malayalam);
           } else if (ev.type === "error") {
             errorCode = ev.code;
+            errorDetail = ev.detail || "";
           }
           scrollToBottom();
         }
@@ -519,7 +523,7 @@ async function ask({ autoSpeak = false } = {}) {
 
   busy = false;
   if (errorCode) {
-    showError(el, errorCode, async () => {
+    showError(el, errorCode, errorDetail, async () => {
       if (locked()) return;
       el.row.remove();
       if (errorCode === "password") await requestPassword();

@@ -223,6 +223,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tool:hover { background: var(--hover); }
 .tool.active { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .error { color: var(--error); }
+.error-detail { color: var(--muted); font-size: 0.6em; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
 
 /* ---------- Composer ---------- */
 .composer { padding: 0 16px calc(8px + env(safe-area-inset-bottom)); }
@@ -307,6 +308,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   animation: blink 1s infinite;
 }
 .rec-status.error { color: var(--error); }
+.error-detail { color: var(--muted); font-size: 0.6em; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
 body:not(.has-voice) .voice-only { display: none; }
 
 dialog {
