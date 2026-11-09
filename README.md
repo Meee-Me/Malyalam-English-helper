@@ -69,7 +69,7 @@ Open <http://localhost:3000>.
 
 | Variable         | Default   | What it does |
 | ---------------- | --------- | ------------ |
-| `GEMINI_MODEL`   | (Flash-Lite) | Gemini model to try first. By default the app uses `gemini-flash-lite-latest`, then falls back to other Flash models. |
+| `GEMINI_MODEL`   | (automatic) | Gemini model to try first. By default the app asks Google which models your key can use and picks the newest Flash-Lite, then Flash. |
 | `SARVAM_SPEAKER` | (default) | Reading voice, e.g. `kavitha`, `anand`, `ritu`. |
 | `SARVAM_PACE`    | `0.9`     | Speaking speed (0.5–2.0). Lower is slower. |
 | `PORT`           | `3000`    | Port for `npm start` on your computer. |
