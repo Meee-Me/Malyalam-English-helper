@@ -1,0 +1,25 @@
+{
+  "name": "malayalam-ai-helper",
+  "version": "1.0.0",
+  "description": "ChatGPT-style assistant: Claude answers in English, translated to Malayalam",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Meee-Me/Malyalam-English-helper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Meee-Me/Malyalam-English-helper/issues"
+  },
+  "homepage": "https://github.com/Meee-Me/Malyalam-English-helper#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
