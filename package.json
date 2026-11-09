@@ -2,9 +2,8 @@
   "name": "malayalam-ai-helper",
   "version": "1.0.0",
   "description": "Voice assistant for Malayalam speakers: Sarvam speech in and out, Gemini answers translated to Malayalam",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node dev-server.js"
   },
   "repository": {
     "type": "git",
@@ -17,7 +16,7 @@
   "type": "module",
   "private": true,
   "engines": {
-    "node": ">=20.12"
+    "node": "22.x"
   },
   "dependencies": {
     "@google/genai": "^3.0.0"
