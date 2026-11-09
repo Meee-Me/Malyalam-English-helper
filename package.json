@@ -14,12 +14,12 @@
     "url": "https://github.com/Meee-Me/Malyalam-English-helper/issues"
   },
   "homepage": "https://github.com/Meee-Me/Malyalam-English-helper#readme",
-  "dependencies": {
-    "@anthropic-ai/sdk": "^1.6.0"
-  },
   "type": "module",
   "private": true,
   "engines": {
-    "node": ">=18"
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "openai": "^7.53.0"
   }
 }

@@ -1,30 +1,41 @@
 // Malayalam AI Helper - a ChatGPT-style assistant for Malayalam speakers.
 //
-//   voice (Malayalam) --Sarvam speech-to-text--> text --Claude--> English answer
-//   --Claude--> Malayalam translation --Sarvam text-to-speech--> spoken Malayalam
+//   voice (Malayalam) --Sarvam speech-to-text--> Malayalam text
+//   --ChatGPT--> answer in English --ChatGPT--> answer in Malayalam
+//   --Sarvam text-to-speech--> spoken Malayalam
 //
-// Run:  ANTHROPIC_API_KEY=sk-ant-... SARVAM_API_KEY=... npm start   ->  http://localhost:3000
+// Put your keys in a file called .env (see .env.example), then:  npm start
 
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+// Load keys from the .env file next to this script, if there is one.
+// (On a hosting site, set them as environment variables instead.)
+try {
+  process.loadEnvFile(path.join(here, ".env"));
+} catch {}
+
 const PUBLIC_DIR = path.join(here, "public");
 const PORT = Number(process.env.PORT) || 3000;
-const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
-// Optional: set APP_PASSWORD so strangers can't use your API key.
+// Optional: set APP_PASSWORD so strangers can't use your API keys.
 const APP_PASSWORD = process.env.APP_PASSWORD || "";
 
-// Sarvam AI (https://www.sarvam.ai) handles the voice parts.
+// ChatGPT (OpenAI) writes the answers.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.5";
+
+// Sarvam AI (https://www.sarvam.ai) handles the voice parts. Always Malayalam.
 const SARVAM_API_KEY = process.env.SARVAM_API_KEY || "";
 const SARVAM_BASE_URL = (process.env.SARVAM_BASE_URL || "https://api.sarvam.ai").replace(/\/$/, "");
-const SARVAM_STT_MODEL = process.env.SARVAM_STT_MODEL || "saaras:v3";
-const SARVAM_LANGUAGE = process.env.SARVAM_LANGUAGE || "ml-IN"; // "unknown" = auto-detect
-const SARVAM_TTS_MODEL = process.env.SARVAM_TTS_MODEL || "bulbul:v3";
-const SARVAM_SPEAKER = process.env.SARVAM_SPEAKER || ""; // empty = model default voice
+const LANGUAGE = "ml-IN";
+const SARVAM_STT_MODEL = "saaras:v3";
+const SARVAM_TTS_MODEL = "bulbul:v3";
+const SARVAM_SPEAKER = process.env.SARVAM_SPEAKER || ""; // empty = Sarvam's default voice
 const SARVAM_PACE = Number(process.env.SARVAM_PACE) || 0.9; // a little slower than normal
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
 const MAX_TTS_CHARS = 2500; // bulbul:v3 limit per request
@@ -32,7 +43,7 @@ const MAX_TTS_CHARS = 2500; // bulbul:v3 limit per request
 const MAX_TURNS = 40; // keep only the most recent messages
 const MAX_CHARS = 4000; // per message
 
-const client = new Anthropic();
+const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 const CHAT_SYSTEM = `You are a warm, patient, and respectful assistant helping an elderly person from Kerala, India.
 Their messages may be in Malayalam, English, or a mix (including Malayalam typed in English letters, "Manglish").
@@ -51,25 +62,34 @@ Rules:
 - Keep names of people, brands, apps, and websites recognisable; you may add the English term in brackets after a technical word if it helps.
 - Keep numbers, phone numbers, URLs, and units as they are.`;
 
-// Server-side refusal fallback: if a request is declined, the API retries it on
-// Anthropic's recommended fallback model instead of returning a refusal.
-const FALLBACK = { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
+// GPT-5 family models accept a reasoning effort; "low" keeps chat replies quick.
+const REASONING = /^(gpt-5|o\d)/.test(OPENAI_MODEL) ? { reasoning_effort: "low" } : {};
 
-/** Streams one Claude call, calling onText for each text chunk. Returns full text. */
-async function streamText(params, onText, signal) {
-  const stream = client.beta.messages.stream(
-    { model: MODEL, max_tokens: 16000, ...FALLBACK, ...params },
+/** Streams one ChatGPT call, calling onText for each text chunk. Returns the full text. */
+async function streamText(system, messages, onText, signal) {
+  const stream = await openai.chat.completions.create(
+    {
+      model: OPENAI_MODEL,
+      messages: [{ role: "system", content: system }, ...messages],
+      stream: true,
+      ...REASONING,
+    },
     { signal },
   );
   let text = "";
-  for await (const event of stream) {
-    if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-      text += event.delta.text;
-      onText(event.delta.text);
+  let finish = null;
+  for await (const chunk of stream) {
+    const choice = chunk.choices?.[0];
+    if (!choice) continue;
+    const piece = choice.delta?.content;
+    if (piece) {
+      text += piece;
+      onText(piece);
     }
+    if (choice.delta?.refusal) finish = "refusal";
+    if (choice.finish_reason) finish = finish || choice.finish_reason;
   }
-  const final = await stream.finalMessage();
-  if (final.stop_reason === "refusal") {
+  if (finish === "content_filter" || finish === "refusal" || (!text && finish)) {
     const err = new Error("refusal");
     err.code = "refusal";
     throw err;
@@ -155,8 +175,8 @@ async function handleTranscribe(req, res) {
   const form = new FormData();
   form.append("file", new Blob([audio], { type }), `voice.${AUDIO_EXT[type] || "webm"}`);
   form.append("model", SARVAM_STT_MODEL);
-  if (SARVAM_STT_MODEL.startsWith("saaras")) form.append("mode", "transcribe");
-  form.append("language_code", SARVAM_LANGUAGE);
+  form.append("mode", "transcribe");
+  form.append("language_code", LANGUAGE);
 
   try {
     const r = await fetch(`${SARVAM_BASE_URL}/speech-to-text`, {
@@ -170,7 +190,7 @@ async function handleTranscribe(req, res) {
       return sendJson(res, 502, { error: sarvamErrorCode(r.status) });
     }
     const data = await r.json();
-    sendJson(res, 200, { text: (data.transcript || "").trim(), language: data.language_code || null });
+    sendJson(res, 200, { text: (data.transcript || "").trim() });
   } catch (err) {
     console.error("Sarvam speech-to-text failed:", err?.message || err);
     sendJson(res, 502, { error: "network" });
@@ -192,7 +212,7 @@ async function handleSpeak(req, res) {
 
   const payload = {
     text,
-    language_code: SARVAM_LANGUAGE === "unknown" ? "ml-IN" : SARVAM_LANGUAGE,
+    language_code: LANGUAGE,
     model: SARVAM_TTS_MODEL,
     pace: SARVAM_PACE,
     output_audio_codec: "mp3",
@@ -229,6 +249,7 @@ async function handleChat(req, res) {
     return;
   }
   if (!passwordOk(req, body.password)) return sendJson(res, 401, { error: "password" });
+  if (!openai) return sendJson(res, 503, { error: "auth" });
   const messages = cleanHistory(body.messages);
   if (!messages) {
     res.writeHead(400).end("Bad messages");
@@ -247,24 +268,13 @@ async function handleChat(req, res) {
 
   try {
     // 1) Get the answer in English.
-    const english = await streamText(
-      {
-        system: CHAT_SYSTEM,
-        output_config: { effort: "low" },
-        messages,
-      },
-      (text) => send({ type: "en", text }),
-      abort.signal,
-    );
+    const english = await streamText(CHAT_SYSTEM, messages, (text) => send({ type: "en", text }), abort.signal);
     send({ type: "en_done" });
 
     // 2) Translate the English answer into Malayalam.
     await streamText(
-      {
-        system: TRANSLATE_SYSTEM,
-        output_config: { effort: "low" },
-        messages: [{ role: "user", content: english }],
-      },
+      TRANSLATE_SYSTEM,
+      [{ role: "user", content: english }],
       (text) => send({ type: "ml", text }),
       abort.signal,
     );
@@ -273,10 +283,10 @@ async function handleChat(req, res) {
     if (abort.signal.aborted) return;
     let code = "server";
     if (err?.code === "refusal") code = "refusal";
-    else if (err instanceof Anthropic.AuthenticationError) code = "auth";
-    else if (err instanceof Anthropic.RateLimitError) code = "busy";
-    else if (err instanceof Anthropic.APIConnectionError) code = "network";
-    else if (err instanceof Anthropic.APIError && err.status >= 500) code = "busy";
+    else if (err instanceof OpenAI.AuthenticationError) code = "auth";
+    else if (err instanceof OpenAI.RateLimitError) code = "busy";
+    else if (err instanceof OpenAI.APIConnectionError) code = "network";
+    else if (err instanceof OpenAI.APIError && err.status >= 500) code = "busy";
     console.error("Chat error:", err?.message || err);
     send({ type: "error", code });
   }
@@ -315,7 +325,11 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && req.url === "/api/transcribe") return handleTranscribe(req, res);
   if (req.method === "POST" && req.url === "/api/speak") return handleSpeak(req, res);
   if (req.method === "GET" && req.url === "/api/config") {
-    return sendJson(res, 200, { needsPassword: Boolean(APP_PASSWORD), voice: Boolean(SARVAM_API_KEY) });
+    return sendJson(res, 200, {
+      needsPassword: Boolean(APP_PASSWORD),
+      chat: Boolean(OPENAI_API_KEY),
+      voice: Boolean(SARVAM_API_KEY),
+    });
   }
   if (req.method === "GET") return serveStatic(req, res);
   res.writeHead(405).end();
@@ -323,10 +337,11 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Malayalam AI Helper running at http://localhost:${PORT}`);
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn("Warning: ANTHROPIC_API_KEY is not set - chat requests will fail.");
+  console.log(`ChatGPT model: ${OPENAI_MODEL}`);
+  if (!OPENAI_API_KEY) {
+    console.warn("Warning: OPENAI_API_KEY is missing - put it in the .env file. Chat will not work.");
   }
   if (!SARVAM_API_KEY) {
-    console.warn("Warning: SARVAM_API_KEY is not set - voice input and Sarvam read-aloud are off.");
+    console.warn("Warning: SARVAM_API_KEY is missing - put it in the .env file. Voice will not work.");
   }
 });
