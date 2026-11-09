@@ -84,6 +84,6 @@ http
   })
   .listen(PORT, () => {
     console.log(`Malayalam AI Helper running at http://localhost:${PORT}`);
-    if (!process.env.OPENAI_API_KEY) console.warn("Warning: OPENAI_API_KEY is missing - chat will not work.");
+    if (!process.env.GEMINI_API_KEY) console.warn("Warning: GEMINI_API_KEY is missing - chat will not work.");
     if (!process.env.SARVAM_API_KEY) console.warn("Warning: SARVAM_API_KEY is missing - voice will not work.");
   });
