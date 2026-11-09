@@ -1,7 +1,7 @@
 {
   "name": "malayalam-ai-helper",
   "version": "1.0.0",
-  "description": "ChatGPT-style assistant: Claude answers in English, translated to Malayalam",
+  "description": "Voice assistant for Malayalam speakers: Sarvam speech in and out, ChatGPT answers translated to Malayalam",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
