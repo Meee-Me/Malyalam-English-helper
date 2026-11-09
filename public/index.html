@@ -30,7 +30,8 @@
   <main id="chat" class="chat" aria-live="polite">
     <section id="welcome" class="welcome">
       <h2>നമസ്കാരം! 🙏</h2>
-      <p>താഴെ നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യുക, അല്ലെങ്കിൽ 🎤 അമർത്തി സംസാരിക്കുക.</p>
+      <p class="voice-only">താഴെയുള്ള 🎤 ബട്ടൺ അമർത്തി ചോദ്യം പറയുക. പറഞ്ഞു കഴിഞ്ഞാൽ വീണ്ടും അമർത്തുക.</p>
+      <p class="text-only">താഴെ നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യുക.</p>
       <div class="chips">
         <button class="chip">ഇന്നത്തെ ആരോഗ്യകരമായ ഭക്ഷണം എന്ത് കഴിക്കാം?</button>
         <button class="chip">ഷുഗർ നിയന്ത്രിക്കാൻ എന്തൊക്കെ ശ്രദ്ധിക്കണം?</button>
@@ -42,9 +43,10 @@
   </main>
 
   <footer class="composer">
+    <div id="recStatus" class="rec-status" hidden></div>
     <form id="form" autocomplete="off">
-      <button type="button" id="mic" class="round-btn mic" title="സംസാരിക്കുക" aria-label="Speak">🎤</button>
-      <textarea id="input" rows="1" placeholder="ഇവിടെ ചോദിക്കൂ…" aria-label="Message"></textarea>
+      <button type="button" id="mic" class="round-btn mic" title="അമർത്തി സംസാരിക്കുക" aria-label="Record voice" hidden>🎤</button>
+      <textarea id="input" rows="1" placeholder="അല്ലെങ്കിൽ ഇവിടെ ടൈപ്പ് ചെയ്യൂ…" aria-label="Message"></textarea>
       <button type="submit" id="send" class="round-btn send" title="അയയ്ക്കുക" aria-label="Send">➤</button>
     </form>
     <p class="hint">AI ചിലപ്പോൾ തെറ്റുകൾ വരുത്താം. പ്രധാന കാര്യങ്ങൾ ഉറപ്പാക്കുക.</p>

@@ -132,8 +132,8 @@ button { font: inherit; cursor: pointer; }
 }
 
 .ml { font-size: 1.05em; }
-.ml p, .en p { margin: 0 0 0.6em; }
-.ml p:last-child, .en p:last-child { margin-bottom: 0; }
+.bubble p { margin: 0 0 0.6em; }
+.bubble p:last-child { margin-bottom: 0; }
 .ml ul, .ml ol, .en ul, .en ol { margin: 0 0 0.6em; padding-left: 1.4em; }
 
 .en {
@@ -211,8 +211,39 @@ button { font: inherit; cursor: pointer; }
 }
 .send { background: var(--accent); color: var(--accent-ink); }
 .send:disabled { opacity: 0.4; cursor: default; }
-.mic { background: var(--en-bg); color: var(--text); }
+.mic {
+  width: 76px;
+  height: 76px;
+  font-size: 1.6em;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.35);
+}
 .mic.listening { background: var(--error); color: #fff; animation: pulse 1.2s infinite; }
+.mic:disabled { opacity: 0.4; cursor: default; animation: none; }
+.composer form { align-items: center; }
+.rec-status {
+  max-width: 860px;
+  margin: 0 auto 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+.rec-status.recording { color: var(--error); }
+.rec-status.recording::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--error);
+  animation: blink 1s infinite;
+}
+.rec-status.error { color: var(--error); }
+body:not(.has-voice) .voice-only,
+body.has-voice .text-only { display: none; }
+.voice-note { font-size: 0.7em; opacity: 0.85; margin-right: 6px; }
 @keyframes pulse { 50% { transform: scale(1.08); } }
 .hint { text-align: center; color: var(--muted); font-size: 0.6em; margin: 6px 0 0; }
 
@@ -242,4 +273,5 @@ dialog h3 { margin-top: 0; }
   .welcome { padding-top: 8px; }
   .icon-btn { padding: 6px 10px; }
   .round-btn { width: 50px; height: 50px; }
+  .mic { width: 68px; height: 68px; }
 }
