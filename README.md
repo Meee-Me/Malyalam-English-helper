@@ -5,27 +5,26 @@ A ChatGPT-style website for Malayalam speakers who would rather **talk than type
 ```
 Grandparent speaks Malayalam 🎤
    → Sarvam speech-to-text   → Malayalam text (shown in the chat)
-   → ChatGPT                  → answer in simple English
-   → ChatGPT                  → answer translated into Malayalam
+   → Gemini                   → answer in simple English
+   → Gemini                   → answer translated into Malayalam
    → Sarvam text-to-speech    → answer read aloud in Malayalam 🔊
 ```
 
-It uses only two services: **ChatGPT (OpenAI)** and **Sarvam AI**. Voice input and voice output are always Malayalam.
+It uses only two services: **Google Gemini** and **Sarvam AI**. Voice input and voice output are always Malayalam.
 
 ## Features
 
 - **ChatGPT-style layout:** a sidebar with past chats (＋ new chat, 🗑 delete), a centered conversation, and a rounded message box. On a phone, ☰ opens the chat list.
 - **Big green 🎤 button.** Tap it, speak, and tap again to stop (up to about 30 seconds). The question is sent automatically.
 - **Spoken answers.** When a question was asked by voice, the answer plays aloud in Sarvam's Malayalam voice. 🔊 replays it and ⏹ stops it.
-- **Malayalam answers in big text.** "English കാണുക" shows ChatGPT's original English.
+- **Malayalam answers in big text.** "English കാണുക" shows Gemini's original English.
 - Typing works too. The text size can be changed (A− / A+), chats are saved in the browser, and dark mode is supported.
 
 ---
 
 ## Step 1 — Get the two keys
 
-1. **ChatGPT key:** <https://platform.openai.com/api-keys> → *Create new secret key*. It starts with `sk-`.
-   You also need some credit under *Billing* on that site. A ChatGPT Plus subscription is separate from API credit and does not cover this.
+1. **Gemini key:** <https://aistudio.google.com/apikey> → *Create API key*. Sign in with any Google account. The free tier is enough for everyday family use, with no card needed.
 2. **Sarvam key:** <https://dashboard.sarvam.ai> → *API Keys*.
 
 ## Step 2 — Put the keys on Vercel (the live website)
@@ -37,7 +36,7 @@ The site runs on **Vercel**. Your keys are stored there, never in the code:
 
    | Name             | Value |
    | ---------------- | ----- |
-   | `OPENAI_API_KEY` | your ChatGPT key (`sk-...`) |
+   | `GEMINI_API_KEY` | your Gemini key |
    | `SARVAM_API_KEY` | your Sarvam key |
    | `APP_PASSWORD`   | a password the family types once (strongly recommended) |
 
@@ -49,9 +48,9 @@ Keeping the keys safe:
 
 - ✅ Keys go **only** in Vercel's Environment Variables, or in a `.env` file on your own computer.
 - ❌ Never put them in the `public/` folder, in the HTML or JavaScript, or in a GitHub commit. `.env` is already in `.gitignore`.
-- ❌ Don't paste them into chats or screenshots. If a key leaks, delete it on the OpenAI or Sarvam website and make a new one.
+- ❌ Don't paste them into chats or screenshots. If a key leaks, delete it on the Google AI Studio or Sarvam website and make a new one.
 
-**Always set `APP_PASSWORD`.** Otherwise anyone who finds the link can spend your OpenAI and Sarvam credit.
+**Always set `APP_PASSWORD`.** Otherwise anyone who finds the link can use up your Gemini and Sarvam allowance.
 
 Every push to the `main` branch on GitHub redeploys the site automatically.
 
@@ -70,7 +69,7 @@ Open <http://localhost:3000>.
 
 | Variable         | Default   | What it does |
 | ---------------- | --------- | ------------ |
-| `OPENAI_MODEL`   | `gpt-5.5` | ChatGPT model. A cheaper option is `gpt-5.4-mini`. |
+| `GEMINI_MODEL`   | `gemini-3.8-flash` | Gemini model. Any model your key can use. |
 | `SARVAM_SPEAKER` | (default) | Reading voice, e.g. `kavitha`, `anand`, `ritu`. |
 | `SARVAM_PACE`    | `0.9`     | Speaking speed (0.5–2.0). Lower is slower. |
 | `PORT`           | `3000`    | Port for `npm start` on your computer. |
@@ -81,7 +80,7 @@ Open <http://localhost:3000>.
 | ------------------------------------------ | ------------ |
 | `public/`                                  | The web page (HTML, CSS, JavaScript). |
 | `api/transcribe.js` → `POST /api/transcribe` | Recorded audio → Sarvam `POST /speech-to-text` (`saaras:v3`, `mode=transcribe`, `language_code=ml-IN`) → `{ text }`. |
-| `api/chat.js` → `POST /api/chat`           | Streams ChatGPT's English answer (`en` events), then ChatGPT's Malayalam translation (`ml` events), as Server-Sent Events. |
+| `api/chat.js` → `POST /api/chat`           | Streams Gemini's English answer (`en` events), then Gemini's Malayalam translation (`ml` events), as Server-Sent Events. |
 | `api/speak.js` → `POST /api/speak`         | Malayalam text → Sarvam `POST /text-to-speech` (`bulbul:v3`, `ml-IN`) → audio. Long answers are split into short pieces, so playback starts quickly. |
 | `lib/app.js`                               | The shared code behind all of the above. |
 | `server.js`                                | Runs everything locally for `npm start`. Vercel doesn't use it. |

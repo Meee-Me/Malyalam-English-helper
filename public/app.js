@@ -1,7 +1,7 @@
 // Front end for Malayalam AI Helper.
 //
 // Voice flow: tap 🎤 → speak → tap again → Sarvam turns the Malayalam speech
-// into text → the text goes to ChatGPT automatically → the server streams the
+// into text → the text goes to Gemini automatically → the server streams the
 // English answer ("en" events) and its Malayalam translation ("ml" events) →
 // the Malayalam answer is read aloud with Sarvam's voice.
 
@@ -26,7 +26,7 @@ const PW_KEY = "ml-helper-password";
 const MAX_RECORD_SECONDS = 29; // Sarvam's quick speech-to-text takes clips under 30 seconds
 
 const ERRORS = {
-  auth: "ChatGPT കീ ശരിയല്ല അല്ലെങ്കിൽ ഇല്ല. ഇത് സജ്ജമാക്കിയ ആളെ അറിയിക്കുക.",
+  auth: "Gemini കീ ശരിയല്ല അല്ലെങ്കിൽ ഇല്ല. ഇത് സജ്ജമാക്കിയ ആളെ അറിയിക്കുക.",
   sarvam_key: "Sarvam കീ ശരിയല്ല അല്ലെങ്കിൽ ഇല്ല. ഇത് സജ്ജമാക്കിയ ആളെ അറിയിക്കുക.",
   busy: "സെർവർ ഇപ്പോൾ തിരക്കിലാണ്. അൽപ്പം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.",
   network: "ഇന്റർനെറ്റ് കണക്ഷൻ പ്രശ്നം. വീണ്ടും ശ്രമിക്കുക.",
@@ -454,7 +454,7 @@ function deleteChat(id) {
   renderSidebar();
 }
 
-// ---------- Talking to ChatGPT ----------
+// ---------- Talking to the AI (Gemini) ----------
 async function ask({ autoSpeak = false } = {}) {
   const chat = current();
   busy = true;
@@ -765,7 +765,7 @@ fetch("/api/config")
     const canRecord = sarvamVoice && window.MediaRecorder && navigator.mediaDevices?.getUserMedia;
     micBtn.hidden = !canRecord;
     document.body.classList.toggle("has-voice", Boolean(canRecord));
-    const missing = [!cfg.chat && "OPENAI_API_KEY", !cfg.voice && "SARVAM_API_KEY"].filter(Boolean);
+    const missing = [!cfg.chat && "GEMINI_API_KEY", !cfg.voice && "SARVAM_API_KEY"].filter(Boolean);
     const note = $("#setupNote");
     note.hidden = missing.length === 0;
     note.textContent = missing.length

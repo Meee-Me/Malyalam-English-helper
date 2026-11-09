@@ -1,7 +1,7 @@
 {
   "name": "malayalam-ai-helper",
   "version": "1.0.0",
-  "description": "Voice assistant for Malayalam speakers: Sarvam speech in and out, ChatGPT answers translated to Malayalam",
+  "description": "Voice assistant for Malayalam speakers: Sarvam speech in and out, Gemini answers translated to Malayalam",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -20,6 +20,6 @@
     "node": ">=20.12"
   },
   "dependencies": {
-    "openai": "^7.53.0"
+    "@google/genai": "^3.0.0"
   }
 }
